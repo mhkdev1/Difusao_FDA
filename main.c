@@ -5,7 +5,7 @@
 #include "pgmfiles.h"
 #include "diff2d.h"
 #include <omp.h>
-
+#include <time.h>
 // gcc -o fda pgmtolist.c pgmfiles.c diff2d.c main.c -lm -fopenmp
 
 int main(int argc, char **argv) {
@@ -17,17 +17,23 @@ int main(int argc, char **argv) {
   float lambda;
   int result;
   eightBitPGMImage *PGMImage;
-
+  clock_t start, end,USER_start,USER_end;
+  double cpu_time_used, inputlag=0;
+  
+  start = clock(); //tempo inicial do programa
   /* ---- read image name  ---- */
 
   PGMImage = (eightBitPGMImage *)malloc(sizeof(eightBitPGMImage));
 
+  USER_start = clock();
   if (!argv[1]) {
     printf("name of input PGM image file (with extender): ");
     scanf("%s", PGMImage->fileName);
   } else {
     strcpy(PGMImage->fileName, argv[1]);
   }
+  USER_end = clock();
+  inputlag = ((double) (USER_end - USER_start))/ CLOCKS_PER_SEC;
 
   result = read8bitPGM(PGMImage);
 
@@ -58,11 +64,13 @@ int main(int argc, char **argv) {
       matrix[i][j] = (float)*(PGMImage->imageData + (i * PGMImage->y) + j);
 
   /* ---- process image ---- */
-
+  USER_start = clock();
   printf("contrast paramter lambda (>0) : ");
   scanf("%f", &lambda);
   printf("number of iterations: ");
   scanf("%ld", &imax);
+  USER_end = clock();
+  inputlag = inputlag + ((double) (USER_end - USER_start))/ CLOCKS_PER_SEC;
 
   #pragma omp parallel for private(i)
   for (i = 1; i <= imax; i++) {
@@ -96,6 +104,14 @@ int main(int argc, char **argv) {
 
   free(PGMImage->imageData);
   free(PGMImage);
+
+  /// tempo final do programa completo
+  end = clock();
+
+  cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+  printf("Tempo de entrada de usuario: %f s\n", inputlag);
+  printf("Tempo TOTAL de execucao: %f segundos\n", cpu_time_used );
+  printf("Tempo de processamento: %f segundos\n", cpu_time_used - inputlag );
 
   return 0;
 }
